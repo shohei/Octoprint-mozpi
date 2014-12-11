@@ -11,6 +11,10 @@ t = threading.Thread(target=m.start())
 t.start()
 # your logic continues through
 ```
+### em-websocket server for testing
+```sh
+$ ruby em-websocket-server/server.rb
+```
 
 OctoPrint
 =========
