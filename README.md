@@ -1,6 +1,7 @@
+Octoprint modified by Shohei Aoki
 # How to work/hack
 
-I Added mozpi package to put websocket listener wherever
+I added mozpi package to put websocket listener wherever
 
 ```python
 import mozpi
