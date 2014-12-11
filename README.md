@@ -4,7 +4,7 @@ Octoprint modified by Shohei Aoki
 I added mozpi package to put websocket listener wherever
 
 ```python
-import mozpi
+from mozpi import Mozpi 
 import threading
 
 m = Mozpi("ws://localhost:8080") #anywhere ws server
