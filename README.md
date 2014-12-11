@@ -1,6 +1,3 @@
-OctoPrint
-=========
-
 # How to work/hack
 
 I Added mozpi package to put websocket listener wherever
@@ -15,6 +12,8 @@ t.start()
 # your logic continues through
 ```
 
+OctoPrint
+=========
 
 [![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=foosel&url=https://github.com/foosel/OctoPrint&title=OctoPrint&language=&tags=github&category=software)
 
