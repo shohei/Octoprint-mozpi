@@ -1,6 +1,21 @@
 OctoPrint
 =========
 
+# How to work/hack
+
+I Added mozpi package to put websocket listener wherever
+
+```python
+import mozpi
+import threading
+
+m = Mozpi("ws://localhost:8080") #anywhere ws server
+t = threading.Thread(target=m.start())
+t.start()
+# your logic continues through
+```
+
+
 [![Flattr this git repo](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=foosel&url=https://github.com/foosel/OctoPrint&title=OctoPrint&language=&tags=github&category=software)
 
 OctoPrint provides a responsive web interface for controlling a 3D printer (RepRap, Ultimaker, ...). It is Free Software
