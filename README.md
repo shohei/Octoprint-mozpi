@@ -16,6 +16,13 @@ t.start()
 $ ruby em-websocket-server/server.rb
 ```
 
+src/octoprint/mozpi/client.py
+```python
+    def on_message(self,ws,message):
+        print message
+        #Play with message for anything you want to!
+```
+
 OctoPrint
 =========
 
