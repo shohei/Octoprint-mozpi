@@ -1,7 +1,8 @@
 #-*-coding: utf-8-*-
 import websocket
-import thread
+import threading
 import time
+from multiprocessing import Process
 
 DEBUG=False
 # DEBUG=True
@@ -9,8 +10,6 @@ DEBUG=False
 class Mozpi():
     def __init__(self,ws_url):
         self.ws_url = ws_url 
-        if self.ws_url =="":
-            self.ws_url = "ws://echo.websocket.org"
 
     def on_message(self,ws,message):
         print message
@@ -24,14 +23,6 @@ class Mozpi():
     
     def on_open(self,ws):
         print "ws connected"
-        thread.start_new_thread(self.run,())
-
-    def run(self,*args):
-        # for i in range(5):
-        #     self.ws.send(u"hello")
-        #     time.sleep(1)
-        while True:
-            pass
 
     def start(self):
         if DEBUG == True:
@@ -41,10 +32,17 @@ class Mozpi():
                                     on_error=self.on_error,
                                     on_close=self.on_close)
         self.ws.on_open=self.on_open
-        self.ws.run_forever()
+        # self.ws.run_forever()
+        # thread.start_new_thread(self.ws.run_forever(),())
+        # t = threading.Thread(target=self.ws.run_forever)
+        # t.start()
+        p = Process(target=self.ws.run_forever)
+        p.start()
 
 if __name__=="__main__":
     # m = Mozpi("ws://echo.websocket.org")
     m = Mozpi("ws://localhost:8080")
-    m.start()
+    t = threading.Thread(target=m.start())
+    t.start()
+    print "Your program goes here"
 
