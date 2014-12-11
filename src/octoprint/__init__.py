@@ -27,6 +27,13 @@ class Main(Daemon):
 		octoprint.run()
 
 def main():
+        from mozpi import Mozpi
+        import threading
+        m = Mozpi("ws://localhost:8080") 
+        t = threading.Thread(target=m.start())
+        t.start()
+        print "******** blocking released" 
+
 	import argparse
 
 	parser = argparse.ArgumentParser(prog="run")
@@ -79,3 +86,4 @@ def main():
 
 if __name__ == "__main__":
 	main()
+
