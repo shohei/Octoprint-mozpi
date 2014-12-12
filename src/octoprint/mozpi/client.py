@@ -7,7 +7,7 @@ from multiprocessing import Process
 DEBUG=False
 # DEBUG=True
 
-class Mozpi():
+class Mozpi:
     def __init__(self,ws_url):
         self.ws_url = ws_url 
 
@@ -32,10 +32,6 @@ class Mozpi():
                                     on_error=self.on_error,
                                     on_close=self.on_close)
         self.ws.on_open=self.on_open
-        # self.ws.run_forever()
-        # thread.start_new_thread(self.ws.run_forever(),())
-        # t = threading.Thread(target=self.ws.run_forever)
-        # t.start()
         p = Process(target=self.ws.run_forever)
         p.start()
 

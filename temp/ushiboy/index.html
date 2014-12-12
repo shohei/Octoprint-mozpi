@@ -1,0 +1,58 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>WebSocket Test</title>
+        <script>
+            // URL
+            URL = window.URL || window.webkitURL;
+            
+            // document
+            var doc = document;
+            
+            // WebSocketを開く
+            var socket = new WebSocket('ws://' + location.host);
+            
+            // messageイベント
+            socket.addEventListener('message', function(evt) {
+                var data = evt.data;
+                if (data.constructor === String) {
+                    // Stringの場合、pタグで追加
+                    var p = doc.createElement('p');
+                    p.textContent = data;
+                    doc.getElementById('messages').appendChild(p);
+                } else if (data.constructor === Blob) {
+                    // Blobの場合、imgタグで追加
+                    var img = new Image();
+                    img.src = URL.createObjectURL(data);
+                    doc.getElementById('images').appendChild(img);
+                } else {
+                    alert('nanigashi');
+                }
+            }, false);
+            
+            // 文字列データをサーバに送信
+            doc.getElementById('sendText')
+            .addEventListener('click', function(evt) {
+                socket.send('test');
+            }, false);
+            
+            // fileを参照したらサーバに送信
+            doc.getElementById('image')
+            .addEventListener('change', function(evt) {
+                var file = evt.target.files[0];
+                socket.send(file);
+            }, false);
+        </script>
+    </head>
+    <body>
+        <input id="sendText" type="button" value="文字列を送る" />
+        <input id="image" name="image" type="file" />
+        <!-- 文字列受信ログ -->
+        <div id="messages"></div>
+        <!-- 画像受信ログ -->
+        <div id="images"></div>
+        <script type="text/javascript" src="index.js"></script>
+    </body>
+</html>
+
