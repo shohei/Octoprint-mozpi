@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <script>
+    window.onload = function(){
+      console.log('loaded');
+      var ws = new WebSocket("ws://localhost:8080"); 
+      ws.onopen = onOpen;
+      ws.onmessage = onMsg;
+      ws.onerror = onErr;
+      ws.onclose = onClose;
+      console.log(ws);
+
+      function onOpen(e){
+           console.log('ws opened');
+           key = {"key":"localgarage-owners"};
+           ws.send(JSON.stringify(key)); 
+      }
+      function onMsg(e){
+            console.log('message received');
+            console.log(e.data);
+            updateClients(e.data);
+      }
+      function onErr(e){
+            console.log('error');
+      }
+      function onClose(e){
+            ws = null;
+            console.log('ws closed');
+      }
+      function updateClients(clients){
+           var c = document.querySelector("#clients");
+           var clients_array = clients.split(','); 
+           c.innerHTML = function(){
+               var str = "<ul>"
+               clients_array.forEach(function(element,index,array){
+                 str += "<li>" + element + "<button id="+element+" style='margin-left:10px'>send</button></li>"
+               });
+               str += "</ul>"
+               return str;
+           }();
+      }
+    } 
+    </script>
+</head>
+<body>
+    <h1>Management console</h1>
+    <div id="clients"></div>
+
+</body>
+</html>
+

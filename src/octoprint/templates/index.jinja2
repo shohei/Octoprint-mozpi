@@ -91,34 +91,39 @@ var SOCKJS_DEBUG = {%  if debug -%} true; {% else %} false; {%- endif %}
     </div>
    </div>
   </div>
-  <div class="container octoprint-container">
+
+
+   <!-- Here is delegation mode -->
+  <!-- <div class="container octoprint&#45;container"> -->
   <!-- hoge -->
   <!-- Button trigger modal -->
-  <div class="pull-right">
-  <button class="btn btn-primary btn-lg" data-toggle="modal" data-target="#myModal">
-   Delegate 
-  </button>
-  </div>
+  <!-- <div class="pull&#45;right"> -->
+  <!-- <button class="btn btn&#45;primary btn&#45;lg" data&#45;toggle="modal" data&#45;target="#myModal"> -->
+  <!--  Delegate  -->
+  <!-- </button> -->
+  <!-- </div> -->
+
   
   <!-- Modal -->
-  <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-          <h2 class="modal-title" id="myModalLabel">!! REMOTE OPERATION MODE !!</h2>
-        </div>
-        <div class="modal-body" >
-            <p style="color:red;">&lt;Warning&gt;This machine is currently remote-controlled.</p>
-            <p>Connecting to server...</p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-default btn-danger" data-dismiss="modal">Stop delegation</button>
-        </div>
-      </div>
-    </div>
-  </div>
-  <!-- hoge -->
+  <!-- <div class="modal fade" id="myModal" tabindex="&#45;1" role="dialog" aria&#45;labelledby="myModalLabel" aria&#45;hidden="true"> -->
+  <!--   <div class="modal&#45;dialog"> -->
+  <!--     <div class="modal&#45;content"> -->
+  <!--       <div class="modal&#45;header"> -->
+  <!--         <button type="button" class="close" data&#45;dismiss="modal"><span aria&#45;hidden="true">&#38;times;</span><span class="sr&#45;only">Close</span></button> -->
+  <!--         <h2 class="modal&#45;title" id="myModalLabel">!! REMOTE OPERATION MODE !!</h2> -->
+  <!--       </div> -->
+  <!--       <div class="modal&#45;body" > -->
+  <!--           <p style="color:red;">&#38;lt;Warning&#38;gt;This machine is currently remote&#45;controlled.</p> -->
+  <!--           <p>Connecting to server...</p> -->
+  <!--       </div> -->
+  <!--       <div class="modal&#45;footer"> -->
+  <!--         <button type="button" class="btn btn&#45;default btn&#45;danger" data&#45;dismiss="modal">Stop delegation</button> -->
+  <!--       </div> -->
+  <!--     </div> -->
+  <!--   </div> -->
+  <!-- </div> -->
+  <!-- delegation mode end -->
+
    <div class="row">
     <div class="accordion span4">
      <div class="accordion-group" data-bind="visible: loginState.isUser" id="connection_accordion">
@@ -280,6 +285,7 @@ var SOCKJS_DEBUG = {%  if debug -%} true; {% else %} false; {%- endif %}
       {% if enableGCodeVisualizer %}<li><a href="#gcode" data-toggle="tab">GCode Viewer</a></li>{% endif %}
       <li><a href="#term" data-toggle="tab">Terminal</a></li>
       {% if enableTimelapse %}<li><a href="#timelapse" data-toggle="tab">Timelapse</a></li>{% endif %}
+      <li><a href="#local-garage" data-toggle="tab">Local Garage</a></li>
      </ul>
 
      <div class="tab-content">
@@ -532,6 +538,85 @@ var SOCKJS_DEBUG = {%  if debug -%} true; {% else %} false; {%- endif %}
        </div>
       </div>
       {% endif %}
+
+
+      <!-- Here is edited area -->
+      <div class="tab-pane" id="local-garage">
+        <div>
+            <h3>Connection status: <span id="LG-status" style="color:red;">not connected</span></h3> 
+        </div>
+
+        <form class="form-horizontal">
+          <div class="control-group">
+            <label class="control-label" for="inputEmail">Name of place</label>
+            <div class="controls">
+              <input type="text" id="LG-Space" placeholder="e.g. FabLab Kamakura">
+            </div>
+          </div>
+          <div class="control-group">
+            <label class="control-label" for="inputPassword">3D Printer</label>
+            <div class="controls">
+              <input type="text" id="LG-Printer" placeholder="e.g. MakerBot Replicator 2">
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="controls">
+              <div id="connectLG" class="btn">Connect to server</div>
+            </div>
+          </div>
+        </form>
+       </div>
+       <script>
+        var connectLG = document.querySelector("#connectLG");
+
+        var validateLG = function(){
+            var place = document.querySelector("#LG-Space").value;
+            var printer = document.querySelector("#LG-Printer").value;
+            console.log(place);
+            console.log(printer);
+            if(place== ""|| printer== ""){
+                return 1;
+            }
+        }
+
+        connectLG.addEventListener("click",function(){
+            if(validateLG()==1) return;
+            var uri = "ws://localhost:8080";
+            ws = new WebSocket(uri);
+            ws.onopen = onOpen;
+            ws.onmessage = onMessage;
+            ws.onclose = onClose;
+            ws.onerror = onError;
+        },false);
+
+        function onOpen(event) {
+            console.log("ws opened");
+            console.log(event.data);
+            var place = document.querySelector("#LG-Space").value;
+            var printer = document.querySelector("#LG-Printer").value;
+            var ID = {id:{"place":place,"printer":printer}};
+            ws.send(JSON.stringify(ID));
+        }
+
+        function onMessage(event) {
+            if (event && event.data) {
+                console.log(event.data);
+            }
+        }
+
+        function onError(event) {
+            console.log("error");
+        }
+
+        function onClose(event) {
+            ws = null;
+            console.log("ws closed");
+        }
+
+       </script>
+        <!-- Edit end -->
+
+
       <div class="tab-pane" id="term">
        <pre id="terminal-output" class="pre-scrollable"></pre>
        <label class="checkbox">
