@@ -1,7 +1,36 @@
 Octoprint modified by Shohei Aoki
-# How to work/hack
 
-I added mozpi package to put websocket listener wherever
+# How to use websocket pub-sub
+
+Run static HTTP server
+```sh
+$ cd management-console
+$ python -m SimpleHTTPServer 8000
+
+open localhost:8000 to see the management console
+```
+Run websocket server(this will run on Local Garage server)
+```sh
+$ cd management-console
+$ node server.js # -> start websocet server on localhost:8080
+```
+Run two or three Octoprint
+```sh
+$ ./run
+```
+Visit OctoPrint and select local garage tab.
+
+Input place and printer, then push the button.
+![octo](octo.png)
+
+
+You will see the management console automatically updated.
+![printer](printers.png)
+
+
+# How to use event machine (EM) 
+
+I added mozpi package to put websocket listener wherever (Event Machine)
 
 ```python
 from mozpi import Mozpi 
