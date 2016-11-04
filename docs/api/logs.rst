@@ -15,22 +15,20 @@ Log file management
 Retrieve a list of available log files
 ======================================
 
-.. http:post:: /api/logs
+.. http:get:: /api/logs
 
    Retrieve information regarding all log files currently available and regarding the disk space still available
    in the system on the location the log files are being stored.
 
    Returns a :ref:`Logfile Retrieve response <sec-api-logs-datamodel-retrieveresponse>`.
 
-   **Example Request**
+   **Example**
 
    .. sourcecode:: http
 
       GET /api/logs HTTP/1.1
       Host: example.com
       X-Api-Key: abcdef...
-
-   **Example response**:
 
    .. sourcecode:: http
 

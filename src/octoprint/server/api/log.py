@@ -1,6 +1,9 @@
 # coding=utf-8
+from __future__ import absolute_import
+
 __author__ = "Marc Hannappel Salandora"
 __license__ = 'GNU Affero General Public License http://www.gnu.org/licenses/agpl.html'
+__copyright__ = "Copyright (C) 2014 The OctoPrint Project - Released under terms of the AGPLv3 License"
 
 import os
 
@@ -9,25 +12,28 @@ from werkzeug.utils import secure_filename
 
 from octoprint.settings import settings
 
-from octoprint.server import restricted_access, NO_CONTENT, admin_permission
-from octoprint.server.util import redirectToTornado
+from octoprint.server import NO_CONTENT, admin_permission
+from octoprint.server.util.flask import redirect_to_tornado, restricted_access
 from octoprint.server.api import api
-from octoprint.util import getFreeBytes
 
 
 @api.route("/logs", methods=["GET"])
 @restricted_access
 @admin_permission.require(403)
 def getLogFiles():
+	import psutil
+	usage = psutil.disk_usage(settings().getBaseFolder("logs"))
+
 	files = _getLogFiles()
-	return jsonify(files=files, free=getFreeBytes(settings().getBaseFolder("logs")))
+
+	return jsonify(files=files, free=usage.free, total=usage.total)
 
 
 @api.route("/logs/<path:filename>", methods=["GET"])
 @restricted_access
 @admin_permission.require(403)
 def downloadLog(filename):
-	return redirectToTornado(request, url_for("index") + "downloads/logs/" + filename)
+	return redirect_to_tornado(request, url_for("index") + "downloads/logs/" + filename)
 
 
 @api.route("/logs/<path:filename>", methods=["DELETE"])

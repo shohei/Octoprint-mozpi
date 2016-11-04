@@ -19,17 +19,38 @@ Issue a job command
      Starts the print of the currently selected file. For selecting a file, see :ref:`Issue a file command <sec-api-fileops-filecommand>`.
      If a print job is already active, a :http:statuscode:`409` will be returned.
 
+   cancel
+     Cancels the current print job.  If no print job is active (either paused or printing), a :http:statuscode:`409`
+     will be returned.
+
    restart
      Restart the print of the currently selected file from the beginning. There must be an active print job for this to work
      and the print job must currently be paused. If either is not the case, a :http:statuscode:`409` will be returned.
 
-   pause
-     Pauses/unpauses the current print job. If no print job is active (either paused or printing), a :http:statuscode:`409`
-     will be returned.
+     Equivalent to issuing a ``cancel`` command while paused, directly followed by a ``start`` command.
 
-   cancel
-     Cancels the current print job.  If no print job is active (either paused or printing), a :http:statuscode:`409`
-     will be returned.
+   pause
+     Pauses/resumes/toggles the current print job. Accepts one optional additional parameter ``action``
+     specifying which action to take. Valid values for this parameter are:
+
+     pause
+         Pauses the current job if it's printing, does nothing if it's already paused.
+     resume
+         Resumes the current job if it's paused, does nothing if it's printing.
+     toggle
+         Toggles the pause state of the job, pausing it if it's printing and resuming it if it's currently paused.
+
+     In order to stay backwards compatible to earlier iterations of this API, the default
+     action to take if no ``action`` parameter is supplied is to toggle the print job status.
+
+     If no print job is active (either paused or printing), a :http:statuscode:`409` will be returned.
+
+     .. note::
+
+        While the approach to implement pause/resume/toggle behaviour through sub commands via the ``action``
+        parameter instead of having dedicated ``pause``, ``resume`` and ``toggle`` commands seems clumsy, this path
+        was chosen to have the API stay backwards compatible to prior versions which only offered the toggle
+        behaviour under the ``pause`` command.
 
    Upon success, a status code of :http:statuscode:`204` and an empty body is returned.
 
@@ -37,7 +58,7 @@ Issue a job command
 
    .. sourcecode:: http
 
-      POST /api/control/job HTTP/1.1
+      POST /api/job HTTP/1.1
       Host: example.com
       Content-Type: application/json
       X-Api-Key: abcdef...
@@ -46,11 +67,32 @@ Issue a job command
         "command": "start"
       }
 
+   .. sourcecode:: http
+
+      HTTP/1.1 204 No Content
+
+   **Example Cancel Request**
+
+   .. sourcecode:: http
+
+      POST /api/job HTTP/1.1
+      Host: example.com
+      Content-Type: application/json
+      X-Api-Key: abcdef...
+
+      {
+        "command": "cancel"
+      }
+
+   .. sourcecode:: http
+
+      HTTP/1.1 204 No Content
+
    **Example Restart Request**
 
    .. sourcecode:: http
 
-      POST /api/control/job HTTP/1.1
+      POST /api/job HTTP/1.1
       Host: example.com
       Content-Type: application/json
       X-Api-Key: abcdef...
@@ -59,31 +101,63 @@ Issue a job command
         "command": "restart"
       }
 
+   .. sourcecode:: http
+
+      HTTP/1.1 204 No Content
+
    **Example Pause Request**
 
    .. sourcecode:: http
 
-      POST /api/control/job HTTP/1.1
+      POST /api/job HTTP/1.1
       Host: example.com
       Content-Type: application/json
       X-Api-Key: abcdef...
 
       {
-        "command": "pause"
+        "command": "pause",
+        "action": "pause"
       }
-
-   **Example Cancel Request**
 
    .. sourcecode:: http
 
-      POST /api/control/job HTTP/1.1
+      HTTP/1.1 204 No Content
+
+   **Example Resume Request**
+
+   .. sourcecode:: http
+
+      POST /api/job HTTP/1.1
       Host: example.com
       Content-Type: application/json
       X-Api-Key: abcdef...
 
       {
-        "command": "cancel"
+        "command": "pause",
+        "action": "resume"
       }
+
+   .. sourcecode:: http
+
+      HTTP/1.1 204 No Content
+
+   **Example Pause Toggle Request**
+
+   .. sourcecode:: http
+
+      POST /api/job HTTP/1.1
+      Host: example.com
+      Content-Type: application/json
+      X-Api-Key: abcdef...
+
+      {
+        "command": "pause",
+        "action": "toggle"
+      }
+
+   .. sourcecode:: http
+
+      HTTP/1.1 204 No Content
 
    :json string command: The command to issue, either ``start``, ``restart``, ``pause`` or ``cancel``
    :statuscode 204:      No error
@@ -101,14 +175,13 @@ Retrieve information about the current job
 
    Returns a :http:statuscode:`200` with a :ref:`sec-api-job-datamodel-response` in the body.
 
-   **Example Request**
+   **Example**
 
    .. sourcecode:: http
 
       GET /api/job HTTP/1.1
       Host: example.com
-
-   **Example Response**
+      X-Api-Key: abcdef...
 
    .. sourcecode:: http
 
@@ -159,90 +232,10 @@ Job information response
      - Description
    * - ``job``
      - 1
-     - :ref:`sec-api-job-datamodel-job`
+     - :ref:`sec-api-datamodel-jobs-job`
      - Information regarding the target of the current print job
    * - ``progress``
      - 1
-     - :ref:`sec-api-job-datamodel-progress`
+     - :ref:`sec-api-datamodel-jobs-progress`
      - Information regarding the progress of the current print job
-
-.. _sec-api-job-datamodel-job:
-
-Job information
----------------
-
-.. list-table::
-   :widths: 15 5 10 30
-   :header-rows: 1
-
-   * - Name
-     - Multiplicity
-     - Type
-     - Description
-   * - ``file``
-     - 1
-     - Object
-     - The file that is the target of the current print job
-   * - ``file.name``
-     - 1
-     - String
-     - The file's name
-   * - ``file.origin``
-     - 1
-     - String, either ``local`` or ``sdcard``
-     - The file's origin, either ``local`` or ``sdcard``
-   * - ``file.size``
-     - 0..1
-     - Integer
-     - The file's size, in bytes. Only available for files stored locally.
-   * - ``file.date``
-     - 0..1
-     - Unix timestamp
-     - The file's upload date. Only available for files stored locally.
-   * - ``estimatedPrintTime``
-     - 0..1
-     - Integer
-     - The estimated print time for the file, in seconds.
-   * - ``filament``
-     - 0..1
-     - Object
-     - Information regarding the estimated filament usage of the print job
-   * - ``filament.length``
-     - 0..1
-     - Integer
-     - Length of filament used, in mm
-   * - ``filament.volume``
-     - 0..1
-     - Float
-     - Volume of filament used, in cm³
-
-.. _sec-api-job-datamodel-progress:
-
-Progress information
---------------------
-
-.. list-table::
-   :widths: 15 5 10 30
-   :header-rows: 1
-
-   * - Name
-     - Multiplicity
-     - Type
-     - Description
-   * - ``completion``
-     - 1
-     - Float
-     - Percentage of completion of the current print job
-   * - ``filepos``
-     - 1
-     - Integer
-     - Current position in the file being printed, in bytes from the beginning
-   * - ``printTime``
-     - 1
-     - Integer
-     - Time already spent printing, in seconds
-   * - ``printTimeLeft``
-     - 1
-     - Integer
-     - Estimate of time left to print, in seconds
 

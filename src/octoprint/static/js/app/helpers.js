@@ -8,7 +8,10 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
     self.defaultFilters = defaultFilters;
     self.exclusiveFilters = exclusiveFilters;
 
+    self.searchFunction = undefined;
+
     self.allItems = [];
+    self.allSize = ko.observable(0);
 
     self.items = ko.observableArray([]);
     self.pageSize = ko.observable(filesPerPage);
@@ -21,12 +24,13 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
 
     self.refresh = function() {
         self._updateItems();
-    }
+    };
 
     self.updateItems = function(items) {
         self.allItems = items;
+        self.allSize(items.length);
         self._updateItems();
-    }
+    };
 
     self.selectItem = function(matcher) {
         var itemList = self.items();
@@ -36,37 +40,54 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
                 break;
             }
         }
-    }
+    };
 
     self.selectNone = function() {
         self.selectedItem(undefined);
-    }
+    };
 
     self.isSelected = function(data) {
         return self.selectedItem() == data;
-    }
+    };
 
     self.isSelectedByMatcher = function(matcher) {
         return matcher(self.selectedItem());
-    }
+    };
+
+    self.removeItem = function(matcher) {
+        var item = self.getItem(matcher, true);
+        if (item === undefined) {
+            return;
+        }
+
+        var index = self.allItems.indexOf(item);
+        if (index > -1) {
+            self.allItems.splice(index, 1);
+            self._updateItems();
+        }
+    };
 
     //~~ pagination
 
     self.paginatedItems = ko.dependentObservable(function() {
         if (self.items() == undefined) {
             return [];
+        } else if (self.pageSize() == 0) {
+            return self.items();
         } else {
             var from = Math.max(self.currentPage() * self.pageSize(), 0);
             var to = Math.min(from + self.pageSize(), self.items().length);
             return self.items().slice(from, to);
         }
-    })
+    });
     self.lastPage = ko.dependentObservable(function() {
-        return Math.ceil(self.items().length / self.pageSize()) - 1;
-    })
+        return (self.pageSize() == 0 ? 1 : Math.ceil(self.items().length / self.pageSize()) - 1);
+    });
     self.pages = ko.dependentObservable(function() {
         var pages = [];
-        if (self.lastPage() < 7) {
+        if (self.pageSize() == 0) {
+            pages.push({ number: 0, text: 1 });
+        } else if (self.lastPage() < 7) {
             for (var i = 0; i < self.lastPage() + 1; i++) {
                 pages.push({ number: i, text: i+1 });
             }
@@ -92,7 +113,7 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
             pages.push({ number: self.lastPage(), text: self.lastPage() + 1})
         }
         return pages;
-    })
+    });
 
     self.switchToItem = function(matcher) {
         var pos = -1;
@@ -108,26 +129,30 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
             var page = Math.floor(pos / self.pageSize());
             self.changePage(page);
         }
-    }
+    };
 
     self.changePage = function(newPage) {
         if (newPage < 0 || newPage > self.lastPage())
             return;
         self.currentPage(newPage);
-    }
-    self.prevPage = function() {
+    };    self.prevPage = function() {
         if (self.currentPage() > 0) {
             self.currentPage(self.currentPage() - 1);
         }
-    }
+    };
     self.nextPage = function() {
         if (self.currentPage() < self.lastPage()) {
             self.currentPage(self.currentPage() + 1);
         }
-    }
+    };
 
-    self.getItem = function(matcher) {
-        var itemList = self.items();
+    self.getItem = function(matcher, all) {
+        var itemList;
+        if (all !== undefined && all === true) {
+            itemList = self.allItems;
+        } else {
+            itemList = self.items();
+        }
         for (var i = 0; i < itemList.length; i++) {
             if (matcher(itemList[i])) {
                 return itemList[i];
@@ -135,7 +160,19 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
         }
 
         return undefined;
-    }
+    };
+
+    //~~ searching
+
+    self.changeSearchFunction = function(searchFunction) {
+        self.searchFunction = searchFunction;
+        self.changePage(0);
+        self._updateItems();
+    };
+
+    self.resetSearch = function() {
+        self.changeSearchFunction(undefined);
+    };
 
     //~~ sorting
 
@@ -148,7 +185,7 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
 
         self.changePage(0);
         self._updateItems();
-    }
+    };
 
     //~~ filtering
 
@@ -161,7 +198,7 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
         } else {
             self.addFilter(filter);
         }
-    }
+    };
 
     self.addFilter = function(filter) {
         if (!_.contains(_.keys(self.supportedFilters), filter))
@@ -184,7 +221,7 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
 
         self.changePage(0);
         self._updateItems();
-    }
+    };
 
     self.removeFilter = function(filter) {
         if (!_.contains(_.keys(self.supportedFilters), filter))
@@ -197,7 +234,7 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
 
         self.changePage(0);
         self._updateItems();
-    }
+    };
 
     //~~ update for sorted and filtered view
 
@@ -219,13 +256,18 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
                 result = _.filter(result, supportedFilters[filter]);
         });
 
+        // search if necessary
+        if (typeof self.searchFunction !== undefined && self.searchFunction) {
+            result = _.filter(result, self.searchFunction);
+        }
+
         // sort if necessary
         if (typeof comparator !== undefined)
             result.sort(comparator);
 
         // set result list
         self.items(result);
-    }
+    };
 
     //~~ local storage
 
@@ -237,7 +279,7 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
             else
                 localStorage[self.listType + "." + "currentSorting"] = undefined;
         }
-    }
+    };
 
     self._loadCurrentSortingFromLocalStorage = function() {
         if ( self._initializeLocalStorage() ) {
@@ -246,20 +288,20 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
             else
                 self.currentSorting(defaultSorting);
         }
-    }
+    };
 
     self._saveCurrentFiltersToLocalStorage = function() {
         if ( self._initializeLocalStorage() ) {
             var filters = _.intersection(_.keys(self.supportedFilters), self.currentFilters());
             localStorage[self.listType + "." + "currentFilters"] = JSON.stringify(filters);
         }
-    }
+    };
 
     self._loadCurrentFiltersFromLocalStorage = function() {
         if ( self._initializeLocalStorage() ) {
             self.currentFilters(_.intersection(_.keys(self.supportedFilters), JSON.parse(localStorage[self.listType + "." + "currentFilters"])));
         }
-    }
+    };
 
     self._initializeLocalStorage = function() {
         if (!Modernizr.localstorage)
@@ -272,7 +314,7 @@ function ItemListHelper(listType, supportedSorting, supportedFilters, defaultSor
         localStorage[self.listType + "." + "currentFilters"] = JSON.stringify(self.defaultFilters);
 
         return true;
-    }
+    };
 
     self._loadCurrentFiltersFromLocalStorage();
     self._loadCurrentSortingFromLocalStorage();
@@ -291,36 +333,288 @@ function formatSize(bytes) {
     return _.sprintf("%.1f%s", bytes, "TB");
 }
 
+function bytesFromSize(size) {
+    if (size == undefined || size.trim() == "") return undefined;
+
+    var parsed = size.match(/^([+]?[0-9]*\.?[0-9]+)(?:\s*)?(.*)$/);
+    var number = parsed[1];
+    var unit = parsed[2].trim();
+
+    if (unit == "") return parseFloat(number);
+
+    var units = {
+        b: 1,
+        byte: 1,
+        bytes: 1,
+        kb: 1024,
+        mb: Math.pow(1024, 2),
+        gb: Math.pow(1024, 3),
+        tb: Math.pow(1024, 4)
+    };
+    unit = unit.toLowerCase();
+
+    if (!units.hasOwnProperty(unit)) {
+        return undefined;
+    }
+
+    var factor = units[unit];
+    return number * factor;
+}
+
 function formatDuration(seconds) {
     if (!seconds) return "-";
+    if (seconds < 1) return "00:00:00";
 
     var s = seconds % 60;
     var m = (seconds % 3600) / 60;
     var h = seconds / 3600;
 
-    return _.sprintf("%02d:%02d:%02d", h, m, s);
+    return _.sprintf(gettext(/* L10N: duration format */ "%(hour)02d:%(minute)02d:%(second)02d"), {hour: h, minute: m, second: s});
+}
+
+function formatFuzzyEstimation(seconds, base) {
+    if (!seconds || seconds < 1) return "-";
+
+    var m;
+    if (base != undefined) {
+        m = moment(base);
+    } else {
+        m = moment();
+    }
+
+    m.add(seconds, "s");
+    return m.fromNow(true);
+}
+
+function formatFuzzyPrintTime(totalSeconds) {
+    /**
+     * Formats a print time estimate in a very fuzzy way.
+     *
+     * Accuracy decreases the higher the estimation is:
+     *
+     *   * less than 30s: "a couple of seconds"
+     *   * 30s to a minute: "less than a minute"
+     *   * 1 to 30min: rounded to full minutes, above 30s is minute + 1 ("27 minutes", "2 minutes")
+     *   * 30min to 40min: "40 minutes"
+     *   * 40min to 50min: "50 minutes"
+     *   * 50min to 1h: "1 hour"
+     *   * 1 to 12h: rounded to half hours, 15min to 45min is ".5", above that hour + 1 ("4 hours", "2.5 hours")
+     *   * 12 to 24h: rounded to full hours, above 30min is hour + 1, over 23.5h is "1 day"
+     *   * Over a day: rounded to half days, 8h to 16h is ".5", above that days + 1 ("1 day", "4 days", "2.5 days")
+     */
+
+    if (!totalSeconds || totalSeconds < 1) return "-";
+
+    var d = moment.duration(totalSeconds, "seconds");
+
+    var seconds = d.seconds();
+    var minutes = d.minutes();
+    var hours = d.hours();
+    var days = d.asDays();
+
+    var replacements = {
+        days: days,
+        hours: hours,
+        minutes: minutes,
+        seconds: seconds,
+        totalSeconds: totalSeconds
+    };
+
+    var text = "-";
+
+    if (days >= 1) {
+        // days
+        if (hours >= 16) {
+            replacements.days += 1;
+            text = gettext("%(days)d days");
+        } else if (hours >= 8 && hours < 16) {
+            text = gettext("%(days)d.5 days");
+        } else {
+            if (days == 1) {
+                text = gettext("%(days)d day");
+            } else {
+                text = gettext("%(days)d days");
+            }
+        }
+    } else if (hours >= 1) {
+        // only hours
+        if (hours < 12) {
+            if (minutes < 15) {
+                // less than .15 => .0
+                if (hours == 1) {
+                    text = gettext("%(hours)d hour");
+                } else {
+                    text = gettext("%(hours)d hours");
+                }
+            } else if (minutes >= 15 && minutes < 45) {
+                // between .25 and .75 => .5
+                text = gettext("%(hours)d.5 hours");
+            } else {
+                // over .75 => hours + 1
+                replacements.hours += 1;
+                text = gettext("%(hours)d hours");
+            }
+        } else {
+            if (hours == 23 && minutes > 30) {
+                // over 23.5 hours => 1 day
+                text = gettext("1 day");
+            } else {
+                if (minutes > 30) {
+                    // over .5 => hours + 1
+                    replacements.hours += 1;
+                }
+                text = gettext("%(hours)d hours");
+            }
+        }
+    } else if (minutes >= 1) {
+        // only minutes
+        if (minutes < 2) {
+            if (seconds < 30) {
+                text = gettext("a minute");
+            } else {
+                text = gettext("2 minutes");
+            }
+        } else if (minutes < 30) {
+            if (seconds > 30) {
+                replacements.minutes += 1;
+            }
+            text = gettext("%(minutes)d minutes");
+        } else if (minutes <= 40) {
+            text = gettext("40 minutes");
+        } else if (minutes <= 50) {
+            text = gettext("50 minutes");
+        } else {
+            text = gettext("1 hour");
+        }
+    } else {
+        // only seconds
+        if (seconds < 30) {
+            text = gettext("a couple of seconds");
+        } else {
+            text = gettext("less than a minute");
+        }
+    }
+
+    return _.sprintf(text, replacements);
 }
 
 function formatDate(unixTimestamp) {
     if (!unixTimestamp) return "-";
-    return moment.unix(unixTimestamp).format("YYYY-MM-DD HH:mm");
+    return moment.unix(unixTimestamp).format(gettext(/* L10N: Date format */ "YYYY-MM-DD HH:mm"));
+}
+
+function formatTimeAgo(unixTimestamp) {
+    if (!unixTimestamp) return "-";
+    return moment.unix(unixTimestamp).fromNow();
 }
 
 function formatFilament(filament) {
     if (!filament || !filament["length"]) return "-";
-    var result = _.sprintf("%.02fm", (filament["length"] / 1000));
+    var result = "%(length).02fm";
     if (filament.hasOwnProperty("volume") && filament.volume) {
-        result += " / " + _.sprintf("%.02fcm³", filament["volume"]);
+        result += " / " + "%(volume).02fcm³";
     }
-    return result;
+    return _.sprintf(result, {length: filament["length"] / 1000, volume: filament["volume"]});
 }
 
 function cleanTemperature(temp) {
-    if (!temp || temp < 10) return "off";
+    if (!temp || temp < 10) return gettext("off");
     return temp;
 }
 
 function formatTemperature(temp) {
-    if (!temp || temp < 10) return "off";
+    if (!temp || temp < 10) return gettext("off");
     return _.sprintf("%.1f&deg;C", temp);
 }
+
+function pnotifyAdditionalInfo(inner) {
+    return '<div class="pnotify_additional_info">'
+        + '<div class="pnotify_more"><a href="#" onclick="$(this).children().toggleClass(\'icon-caret-right icon-caret-down\').parent().parent().next().slideToggle(\'fast\')">More <i class="icon-caret-right"></i></a></div>'
+        + '<div class="pnotify_more_container hide">' + inner + '</div>'
+        + '</div>';
+}
+
+function ping(url, callback) {
+    var img = new Image();
+    var calledBack = false;
+
+    img.onload = function() {
+        callback(true);
+        calledBack = true;
+    };
+    img.onerror = function() {
+        if (!calledBack) {
+            callback(true);
+            calledBack = true;
+        }
+    };
+    img.src = url;
+    setTimeout(function() {
+        if (!calledBack) {
+            callback(false);
+            calledBack = true;
+        }
+    }, 1500);
+}
+
+function showOfflineOverlay(title, message, reconnectCallback) {
+    if (title == undefined) {
+        title = gettext("Server is offline");
+    }
+
+    $("#offline_overlay_title").text(title);
+    $("#offline_overlay_message").html(message);
+    $("#offline_overlay_reconnect").click(reconnectCallback);
+    if (!$("#offline_overlay").is(":visible"))
+        $("#offline_overlay").show();
+}
+
+function hideOfflineOverlay() {
+    $("#offline_overlay").hide();
+}
+
+function showConfirmationDialog(message, onacknowledge) {
+    var confirmationDialog = $("#confirmation_dialog");
+    var confirmationDialogAck = $(".confirmation_dialog_acknowledge", confirmationDialog);
+
+    $(".confirmation_dialog_message", confirmationDialog).text(message);
+    confirmationDialogAck.unbind("click");
+    confirmationDialogAck.bind("click", function (e) {
+        e.preventDefault();
+        $("#confirmation_dialog").modal("hide");
+        onacknowledge(e);
+    });
+    confirmationDialog.modal("show");
+}
+
+function showReloadOverlay() {
+    $("#reloadui_overlay").show();
+}
+
+function commentableLinesToArray(lines) {
+    return splitTextToArray(lines, "\n", true, function(item) {return !_.startsWith(item, "#")});
+}
+
+function splitTextToArray(text, sep, stripEmpty, filter) {
+    return _.filter(
+        _.map(
+            text.split(sep),
+            function(item) { return (item) ? item.trim() : ""; }
+        ),
+        function(item) { return (stripEmpty ? item : true) && (filter ? filter(item) : true); }
+    );
+}
+
+var sizeObservable = function(observable) {
+    return ko.computed({
+        read: function() {
+            return formatSize(observable());
+        },
+        write: function(value) {
+            var result = bytesFromSize(value);
+            if (result != undefined) {
+                observable(result);
+            }
+        }
+    })
+};
